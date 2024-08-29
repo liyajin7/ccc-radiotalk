@@ -1,0 +1,3 @@
+# Docker env files for testing
+*.env
+

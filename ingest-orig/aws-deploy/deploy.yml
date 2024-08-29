@@ -1,0 +1,208 @@
+# Parts borrowed from an awslabs reference architecture:
+# https://github.com/awslabs/golang-deployment-pipeline/blob/master/cloudformation/pipeline.yml
+
+Parameters:
+  ApplicationName: 
+    Type: String
+    Default: talk-radio
+
+  GithubUser:
+    Description: Enter Github username of the repository owner
+    Type: String
+    Default: social-machines
+
+  GithubRepository:
+    Description: Enter the repository name that should be monitored for changes
+    Type: String
+    Default: talk-radio
+
+  GithubBranch:
+    Description: Enter the Github branch to monitored
+    Type: String
+    Default: master
+
+  GithubOAuthToken: 
+    Description: Create a token with 'repo' and 'admin:repo_hook' permissions at https://github.com/settings/tokens
+    Type: String
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: 
+          default: Application Configuration
+        Parameters:
+          - ApplicationName
+      - Label:
+          default: Github Configuration
+        Parameters:
+          - GithubOAuthToken
+          - GithubUser
+          - GithubRepository
+          - GithubBranch
+        
+    ParameterLabels:
+      ApplicationName: 
+        default: Application Name
+      GithubRepository: 
+        default: Repository Name
+      GithubUser: 
+        default: Repository Owner
+      GithubBranch: 
+        default: Repository Branch
+      GithubOAuthToken: 
+        default: OAuth2 Token
+
+Resources:
+  ##
+  ## IAM roles for other resources
+  ## NOTE: all of these have way more access than they need (for testing);
+  ## should be restricted in production
+  ##
+  CodePipelineCloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AdministratorAccess"
+  
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+      Policies:
+        - PolicyName: !Sub ${ApplicationName}-codepipeline-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - "autoscaling:*"
+                  - "cloudformation:*"
+                  - "cloudwatch:*"
+                  - "elasticbeanstalk:*"
+                  - "elasticloadbalancing:*"
+                  - "ec2:*"
+                  - "ecs:*"
+                  - "rds:*"
+                  - "s3:*"
+                  - "sns:*"
+                  - "sqs:*"
+                  - "codebuild:*"
+                  - "iam:PassRole"
+                  - "sts:AssumeRole"
+
+  ##
+  ## Codebuild and Codepipeline resources
+  ##
+  ArtifactStore:
+    # not necessary, could be replaced with e.g. cortico-data
+    Type: AWS::S3::Bucket
+
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: !Sub Build project for ${ApplicationName}
+      Name: !Sub ${ApplicationName}
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ingest/deploy/buildspec.yml
+      Artifacts:
+        Name: !Ref ApplicationName
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        PrivilegedMode: true
+        Image: aws/codebuild/docker:17.09.0
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: ApplicationName
+            Value: !Ref ApplicationName
+
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactStore
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+              - Name: Github
+                ActionTypeId:
+                    Category: Source
+                    Owner: ThirdParty
+                    Version: 1
+                    Provider: GitHub
+                OutputArtifacts:
+                    -  Name: Source
+                Configuration:
+                    Owner: !Ref GithubUser
+                    Repo: !Ref GithubRepository
+                    Branch: !Ref GithubBranch
+                    OAuthToken: !Ref GithubOAuthToken
+        - Name: Build
+          Actions:
+            - Name: CodeBuild
+              InputArtifacts:
+                - Name: Source
+              ActionTypeId: 
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: Built
+              Configuration: 
+                ProjectName: !Ref CodeBuild
+        - Name: Deploy
+          Actions:
+            - Name: DeployInfrastructure
+              RunOrder: 1
+              InputArtifacts:
+                - Name: Built
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !Sub ${CodePipelineCloudFormationRole.Arn}
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName: !Sub ${ApplicationName}-staging
+                TemplatePath: Built::ingest/deploy/infrastructure.yml
+

@@ -1,0 +1,45 @@
+version: '2'
+
+services:
+    worker:
+        build:
+            context: images/worker
+        container_name: worker
+        hostname: worker
+        networks:
+            - stack
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+          - DATABASE_HOST=postgres
+          - DATABASE_PORT=5432
+          - DATABASE_DBNAME=postgres
+          - DATABASE_USERNAME=postgres
+        restart: always
+        env_file: conf.env
+
+    postgres:
+        build:
+            context: images/postgres/
+            args:
+                - POSTGRES_VERSION=12.6
+                - POSTGIS_VERSION=postgresql-12-postgis-3
+        container_name: postgres
+        hostname: postgres
+        user: postgres
+        environment:
+            - PGPORT=5432
+        networks:
+            - stack
+        restart: always
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        env_file: conf.env
+
+networks:
+    stack:
+        driver: bridge

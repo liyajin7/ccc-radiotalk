@@ -1,0 +1,516 @@
+Parameters:
+  ##
+  ## Settings
+  ##
+  DatabasePort:
+    Type: Number
+    Default: 5432
+
+  DatabaseDBName:
+    Type: String
+    Default: talkradio
+
+  DesiredWorkerCount:
+    Type: Number
+    Default: 1
+
+  DesiredClusterCount:
+    Type: Number
+    Default: 1
+
+  InstanceType:
+    Type: String
+    Default: c4.large
+
+  TargetS3Bucket:
+    Type: String
+    Default: lsm-data
+
+  TargetS3Prefix:
+    Type: String
+    Default: talk-radio
+
+  SourceS3Bucket:
+    Type: String
+    Default: lsm-data
+
+  SourceS3Key:
+    Type: String
+    Default: talk-radio/radio.tar.gz
+
+  ##
+  ## Resources we can't create here; create these manually
+  ## and update the values here if redeploying the stack
+  ## on a new account
+  ##
+  DatabaseUsername:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: talk-radio-db-username
+
+  DatabasePassword:
+    # this is the key name in ssm, not the pw itself
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: talk-radio-db-password
+
+  DatabasePasswordKey:
+    Type: AWS::SSM::Parameter::Name<String>
+    Default: talk-radio-db-password
+
+  ##
+  ## We could create these in the template, but creating our
+  ## own VPC is a little aggressive. If deploying in a new
+  ## account, update these values.
+  ##
+  ## Constraints:
+  ##   o) All subnets must be in the VPC
+  ##   o) The 'A' subnets have to be in a different availability
+  ##      zone from the 'B' subnets.
+  ##   o) Reasonable number of free IPs in each subnet, say 16+.
+  ##   o) The compute subnets must be connected to the internet
+  ##      and able to support assigning public IPs.
+  ##
+  Vpc:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-4846d02d
+
+  ComputeSubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-8b1c22ef
+
+  ComputeSubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-bc431793
+
+  DBSubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-14211f70
+
+  DBSubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-812438ca
+
+Mappings:
+  # See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+  AWSRegionToAMI:
+    us-east-2:
+      AMI: ami-ef64528a
+    us-east-1:
+      AMI: ami-cad827b7
+    us-west-2:
+      AMI: ami-baa236c2
+    us-west-1:
+      AMI: ami-29b8b249
+    eu-west-3:
+      AMI: ami-0356e07e
+    eu-west-2:
+      AMI: ami-25f51242
+    eu-west-1:
+      AMI: ami-64c4871d
+    eu-central-1:
+      AMI: ami-3b7d1354
+    ap-northeast-2:
+      AMI: ami-3b19b455
+    ap-northeast-1:
+      AMI: ami-bb5f13dd
+    ap-southeast-2:
+      AMI: ami-a677b6c4
+    ap-southeast-1:
+      AMI: ami-f88ade84
+    ca-central-1:
+      AMI: ami-db48cfbf
+    ap-south-1:
+      AMI: ami-9e91cff1
+    sa-east-1:
+      AMI: ami-da2c66b6
+
+Resources:
+  ##
+  ## IAM roles for other resources
+  ##
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+        - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+
+  ##
+  ## Security groups
+  ##
+  ComputeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupName: talk-radio
+      GroupDescription: "Talk radio compute security group"
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupName: talk-radio-dbs
+      GroupDescription: "Talk radio DB security group"
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  DBSecurityGroupDBIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+      - ComputeSecurityGroup
+      - DBSecurityGroup
+    Properties:
+      GroupId: !Ref DBSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref DBSecurityGroup
+
+  DBSecurityGroupComputeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+      - ComputeSecurityGroup
+      - DBSecurityGroup
+    Properties:
+      GroupId: !Ref DBSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref ComputeSecurityGroup
+
+  ComputeSecurityGroupDBIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+      - ComputeSecurityGroup
+      - DBSecurityGroup
+    Properties:
+      GroupId: !Ref ComputeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref DBSecurityGroup
+
+  ComputeSecurityGroupComputeIngressTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+      - ComputeSecurityGroup
+      - DBSecurityGroup
+    Properties:
+      GroupId: !Ref ComputeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref ComputeSecurityGroup
+
+  ComputeSecurityGroupComputeIngressUDP:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+      - ComputeSecurityGroup
+      - DBSecurityGroup
+    Properties:
+      GroupId: !Ref DBSecurityGroup
+      IpProtocol: udp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref ComputeSecurityGroup
+
+  ##
+  ## Our coordinating Postgres instance
+  ##
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Talk radio DB subnet"
+      DBSubnetGroupName: "talk-radio-db-subnet-group"
+      SubnetIds:
+        - !Ref DBSubnetA
+        - !Ref DBSubnetB
+
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: "Talk radio postgres 10 DB parameter group"
+      Family: "postgres10"
+      Parameters:
+        max_connections: "LEAST({DBInstanceClassMemory/3177131},5000)"
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 50
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: 30
+      DBInstanceClass: "db.t2.small"
+      DBName: !Ref DatabaseDBName
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBParameterGroupName: !Ref DBParameterGroup
+      Engine: postgres
+      EngineVersion: "10.1"
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      MultiAZ: false
+      Port: !Ref DatabasePort
+      PreferredBackupWindow: "08:00-09:00"
+      PreferredMaintenanceWindow: "Sun:07:00-Sun:08:00"
+      PubliclyAccessible: false
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+
+  ##
+  ## CloudWatch resources
+  ##
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: talk-radio
+      RetentionInDays: 30
+
+  ##
+  ## ECS infrastructure
+  ##
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: talk-radio
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
+      AssociatePublicIpAddress: true
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref ComputeSecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      UserData:
+        "Fn::Base64": !Sub |
+          #!/bin/bash
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
+
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              awslogs: []
+
+          commands:
+            01_add_instance_to_cluster:
+              command: !Sub echo ECS_CLUSTER=${Cluster} >> /etc/ecs/ecs.config
+
+            02_reserve_system_memory:
+              command: echo ECS_RESERVED_MEMORY=256 >> /etc/ecs/ecs.config
+
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              mode: 000400
+              owner: root
+              group: root
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.LaunchConfiguration.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+
+            "/etc/awslogs/awscli.conf":
+              content: !Sub |
+                [plugins]
+                cwlogs = cwlogs
+                [default]
+                region = ${AWS::Region}
+
+            "/etc/awslogs/awslogs.conf":
+              content: !Sub |
+                [general]
+                state_file = /var/lib/awslogs/agent-state
+
+                [/var/log/dmesg]
+                file = /var/log/dmesg
+                log_group_name = ${Cluster}-/var/log/dmesg
+                log_stream_name = {instance_id}/var/log/dmesg
+
+                [/var/log/messages]
+                file = /var/log/messages
+                log_group_name = ${Cluster}-/var/log/messages
+                log_stream_name = {instance_id}/var/log/messages
+                datetime_format = %b %d %H:%M:%S
+
+                [/var/log/docker]
+                file = /var/log/docker
+                log_group_name = ${Cluster}-/var/log/docker
+                log_stream_name = {instance_id}/var/log/docker
+                datetime_format = %Y-%m-%dT%H:%M:%S.%f
+
+                [/var/log/ecs/ecs-init.log]
+                file = /var/log/ecs/ecs-init.log.*
+                log_group_name = ${Cluster}-/var/log/ecs/ecs-init.log
+                log_stream_name = {instance_id}/var/log/ecs/ecs-init.log
+                datetime_format = %Y-%m-%dT%H:%M:%SZ
+
+                [/var/log/ecs/ecs-agent.log]
+                file = /var/log/ecs/ecs-agent.log.*
+                log_group_name = ${Cluster}-/var/log/ecs/ecs-agent.log
+                log_stream_name = {instance_id}/var/log/ecs/ecs-agent.log
+                datetime_format = %Y-%m-%dT%H:%M:%SZ
+
+                [/var/log/ecs/audit.log]
+                file = /var/log/ecs/audit.log.*
+                log_group_name = ${Cluster}-/var/log/ecs/audit.log
+                log_stream_name = {instance_id}/var/log/ecs/audit.log
+                datetime_format = %Y-%m-%dT%H:%M:%SZ
+
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+
+              awslogs:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/awslogs/awslogs.conf
+                  - /etc/awslogs/awscli.conf
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref ComputeSubnetA
+        - !Ref ComputeSubnetB
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: !Ref DesiredClusterCount
+      MaxSize: !Ref DesiredClusterCount
+      DesiredCapacity: !Ref DesiredClusterCount
+      Tags:
+        - Key: Name
+          Value: talk-radio ECS host
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+        WaitOnResourceSignals: true
+
+  ##
+  ## Our task and service
+  ##
+  WorkerTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: talk-radio-task-worker
+      ContainerDefinitions:
+        - Name: talk-radio-worker
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/talk-radio/worker:latest
+          Essential: true
+          MemoryReservation: 285
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Sub ${AWS::Region}
+
+            - Name: DATABASE_HOST
+              Value: !GetAtt Database.Endpoint.Address
+            - Name: DATABASE_PORT
+              Value: !GetAtt Database.Endpoint.Port
+            - Name: DATABASE_DBNAME
+              Value: !Ref DatabaseDBName
+            - Name: DATABASE_USERNAME
+              Value: !Ref DatabaseUsername
+            - Name: DATABASE_PASSWORD_KEY
+              Value: !Ref DatabasePasswordKey
+
+            - Name: S3_BUCKET
+              Value: !Ref TargetS3Bucket
+            - Name: S3_PREFIX
+              Value: !Ref TargetS3Prefix
+
+            - Name: DATA_SOURCE_S3_BUCKET
+              Value: !Ref SourceS3Bucket
+            - Name: DATA_SOURCE_S3_KEY
+              Value: !Ref SourceS3Key
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Sub ${AWS::Region}
+              awslogs-stream-prefix: talk-radio-task-worker
+
+  WorkerService:
+    Type: AWS::ECS::Service
+    DependsOn: AutoScalingGroup
+    Properties:
+      Cluster: !Ref Cluster
+      LaunchType: EC2
+      TaskDefinition: !Ref WorkerTask
+      DesiredCount: !Ref DesiredWorkerCount
+      PlacementStrategies:
+        - Type: binpack
+          Field: memory
+
+Outputs:
+  Cluster:
+    Description: The ingest ECS cluster
+    Value: !Ref Cluster
+
+  DatabaseHost:
+    Description: Hostname of the ingest database
+    Value: !GetAtt Database.Endpoint.Address
+
+  DatabasePort:
+    Description: Postgres port of the ingest database
+    Value: !GetAtt Database.Endpoint.Port
+

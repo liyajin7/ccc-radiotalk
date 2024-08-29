@@ -1,0 +1,13 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - sudo apt-get update && apt-get install jq
+  build:
+    commands:
+      - cd ingest && /bin/bash deploy/deploy.sh
+artifacts:
+  files:
+    - ingest/deploy/infrastructure.yml
+
