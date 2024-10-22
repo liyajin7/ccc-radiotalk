@@ -71,23 +71,23 @@ Parameters:
   ##
   Vpc:
     Type: AWS::EC2::VPC::Id
-    Default: vpc-4846d02d
+    Default: vpc-026cd1893623bde9f
 
   ComputeSubnetA:
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-8b1c22ef
+    Default: subnet-0c7e17ea09da429aa
 
   ComputeSubnetB:
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-bc431793
+    Default: subnet-0b93092cea9b49291
 
   DBSubnetA:
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-14211f70
+    Default: subnet-03371ebff7849ceb0
 
   DBSubnetB:
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-812438ca
+    Default: subnet-028199d00a32fda59
 
 Mappings:
   # See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
