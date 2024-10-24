@@ -9,5 +9,5 @@ phases:
       - cd ingest && /bin/bash deploy/deploy.sh
 artifacts:
   files:
-    - ingest/deploy/infrastructure.yml
+    - ingest-orig/aws-deploy/infrastructure.yml
 

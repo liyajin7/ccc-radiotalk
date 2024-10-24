@@ -142,7 +142,7 @@ Resources:
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
         Type: CODEPIPELINE
-        BuildSpec: ingest/deploy/buildspec.yml
+        BuildSpec: ingest-orig/aws-deploy/buildspec.yml
       Artifacts:
         Name: !Ref ApplicationName
         Type: CODEPIPELINE
@@ -208,4 +208,4 @@ Resources:
                 RoleArn: !Sub ${CodePipelineCloudFormationRole.Arn}
                 Capabilities: CAPABILITY_NAMED_IAM
                 StackName: !Sub ${ApplicationName}-staging
-                TemplatePath: Built::ingest/deploy/infrastructure.yml
+                TemplatePath: Built::ingest-orig/aws-deploy/infrastructure.yml
