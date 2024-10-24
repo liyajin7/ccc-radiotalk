@@ -6,7 +6,7 @@ phases:
       - sudo apt-get update && apt-get install jq
   build:
     commands:
-      - cd ingest && /bin/bash deploy/deploy.sh
+      - cd ingest-orig && /bin/bash aws-deploy/deploy.sh
 artifacts:
   files:
     - ingest-orig/aws-deploy/infrastructure.yml
