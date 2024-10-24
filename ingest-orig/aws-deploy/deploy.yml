@@ -2,33 +2,37 @@
 # https://github.com/awslabs/golang-deployment-pipeline/blob/master/cloudformation/pipeline.yml
 
 Parameters:
-  ApplicationName: 
+  ApplicationName:
     Type: String
     Default: talk-radio
 
   GithubUser:
     Description: Enter Github username of the repository owner
     Type: String
-    Default: social-machines
+    # Default: social-machines
+    Default: liyajin7
 
   GithubRepository:
     Description: Enter the repository name that should be monitored for changes
     Type: String
-    Default: talk-radio
+    # Default: talk-radio
+    Default: ccc-radiotalk
 
   GithubBranch:
     Description: Enter the Github branch to monitored
     Type: String
-    Default: master
+    # Default: master
+    Default: liya-updates
 
-  GithubOAuthToken: 
-    Description: Create a token with 'repo' and 'admin:repo_hook' permissions at https://github.com/settings/tokens
+  GithubOAuthToken:
+    Description: Create a token with 'repo' and 'admin:repo_hook' permissions at
+      https://github.com/settings/tokens
     Type: String
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label: 
+      - Label:
           default: Application Configuration
         Parameters:
           - ApplicationName
@@ -39,17 +43,17 @@ Metadata:
           - GithubUser
           - GithubRepository
           - GithubBranch
-        
+
     ParameterLabels:
-      ApplicationName: 
+      ApplicationName:
         default: Application Name
-      GithubRepository: 
+      GithubRepository:
         default: Repository Name
-      GithubUser: 
+      GithubUser:
         default: Repository Owner
-      GithubBranch: 
+      GithubBranch:
         default: Repository Branch
-      GithubOAuthToken: 
+      GithubOAuthToken:
         default: OAuth2 Token
 
 Resources:
@@ -70,8 +74,8 @@ Resources:
               Service:
                 - cloudformation.amazonaws.com
       ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/AdministratorAccess"
-  
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
@@ -84,10 +88,10 @@ Resources:
               Service:
                 - codebuild.amazonaws.com
       ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
-        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
-        - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
 
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -106,22 +110,22 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
-                Resource: "*"
+                Resource: '*'
                 Action:
-                  - "autoscaling:*"
-                  - "cloudformation:*"
-                  - "cloudwatch:*"
-                  - "elasticbeanstalk:*"
-                  - "elasticloadbalancing:*"
-                  - "ec2:*"
-                  - "ecs:*"
-                  - "rds:*"
-                  - "s3:*"
-                  - "sns:*"
-                  - "sqs:*"
-                  - "codebuild:*"
-                  - "iam:PassRole"
-                  - "sts:AssumeRole"
+                  - autoscaling:*
+                  - cloudformation:*
+                  - cloudwatch:*
+                  - elasticbeanstalk:*
+                  - elasticloadbalancing:*
+                  - ec2:*
+                  - ecs:*
+                  - rds:*
+                  - s3:*
+                  - sns:*
+                  - sqs:*
+                  - codebuild:*
+                  - iam:PassRole
+                  - sts:AssumeRole
 
   ##
   ## Codebuild and Codepipeline resources
@@ -161,32 +165,32 @@ Resources:
       Stages:
         - Name: Source
           Actions:
-              - Name: Github
-                ActionTypeId:
-                    Category: Source
-                    Owner: ThirdParty
-                    Version: 1
-                    Provider: GitHub
-                OutputArtifacts:
-                    -  Name: Source
-                Configuration:
-                    Owner: !Ref GithubUser
-                    Repo: !Ref GithubRepository
-                    Branch: !Ref GithubBranch
-                    OAuthToken: !Ref GithubOAuthToken
+            - Name: Github
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: Source
+              Configuration:
+                Owner: !Ref GithubUser
+                Repo: !Ref GithubRepository
+                Branch: !Ref GithubBranch
+                OAuthToken: !Ref GithubOAuthToken
         - Name: Build
           Actions:
             - Name: CodeBuild
               InputArtifacts:
                 - Name: Source
-              ActionTypeId: 
+              ActionTypeId:
                 Category: Build
                 Owner: AWS
                 Version: 1
                 Provider: CodeBuild
               OutputArtifacts:
                 - Name: Built
-              Configuration: 
+              Configuration:
                 ProjectName: !Ref CodeBuild
         - Name: Deploy
           Actions:
@@ -205,4 +209,3 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 StackName: !Sub ${ApplicationName}-staging
                 TemplatePath: Built::ingest/deploy/infrastructure.yml
-

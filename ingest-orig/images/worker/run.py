@@ -80,7 +80,7 @@ if __name__ == '__main__':
     try:
         DATA_SOURCE_S3_BUCKET = os.environ['DATA_SOURCE_S3_BUCKET']
     except KeyError:
-        DATA_SOURCE_S3_BUCKET = 'lsm-data'
+        DATA_SOURCE_S3_BUCKET = 'lsm-data-1'    #  prev 'lsm-data'
 
     try:
         DATA_SOURCE_S3_KEY = os.environ['DATA_SOURCE_S3_KEY']

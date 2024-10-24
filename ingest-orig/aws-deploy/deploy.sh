@@ -7,8 +7,17 @@ export AWS_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r .Account)"
 declare -a current_repos
 lines="$(aws ecr describe-repositories | jq -r '.repositories[] | .repositoryName')"
 mapfile -t current_repos <<< "$lines"
+# mapfile: built-in Bash command that reads lines from the standard input (or from a file) and stores them in an array
+# -t: tells mapfile to omit the trailing newline characters from each line it reads
+# current_repos: name of the array variable that will store the lines of input
+# <<<: passes the content of a string to the command on the left side
 
-$(aws ecr get-login --no-include-email) #  docker login for push
+## New docker login for push
+$(aws ecr get-login-password)
+# aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+#$(aws ecr get-login --no-include-email) #  docker login for push
+                                         #  deprection of the command get-login --no-include-email in awscli version 1.7.10
+                                         #  aws ecr get-login-password | docker login --username AWS --password-stdin 1234567890.dkr.ecr.us-west-2.amazonaws.com/reponame
 
 for target in "${target_repos[@]}"; do
     echo "Processing $target"

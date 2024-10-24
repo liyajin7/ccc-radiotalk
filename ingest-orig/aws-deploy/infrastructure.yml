@@ -24,7 +24,7 @@ Parameters:
 
   TargetS3Bucket:
     Type: String
-    Default: lsm-data
+    Default: lsm-data-1   #  prev lsm-data
 
   TargetS3Prefix:
     Type: String
@@ -32,7 +32,7 @@ Parameters:
 
   SourceS3Bucket:
     Type: String
-    Default: lsm-data
+    Default: lsm-data-1   #  prev lsm-data
 
   SourceS3Key:
     Type: String
