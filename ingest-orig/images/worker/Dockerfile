@@ -1,4 +1,5 @@
-FROM python:3
+# FROM python:3
+FROM public.ecr.aws/docker/library/python:3
 
 ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 
