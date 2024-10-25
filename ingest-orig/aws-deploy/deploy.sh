@@ -36,7 +36,7 @@ for target in "${target_repos[@]}"; do
         aws ecr create-repository --repository-name "$rname"
     fi
 
-    docker build -t "$rname" images/"$target"
+    docker build -t "$rname" images/"$target"   # builds an image tagged/versioned as "talk-raio/worker" from directory (build-context) images/worker
     docker tag "$rname:latest" "$repo_url"
     docker push "$repo_url"
 done
