@@ -2,6 +2,7 @@
 FROM public.ecr.aws/docker/library/python:3
 
 ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+ENV DOCKER_CONTENT_TRUST=0
 
 RUN apt-get update && apt-get install -y apt-utils && apt-get -y upgrade
 RUN apt-get install -y unixodbc unixodbc-dev odbc-postgresql jq \
