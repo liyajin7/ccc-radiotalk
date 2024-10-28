@@ -3,11 +3,9 @@
 ## Create repos (if necessary), build, tag and push
 declare -a target_repos=("worker")
 export AWS_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r .Account)"
-echo "DEBUG: aws sts command ran"
 
 declare -a current_repos
 lines="$(aws ecr describe-repositories | jq -r '.repositories[] | .repositoryName')"
-echo "DEBUG: aws ecr describe-repositories command ran"
 mapfile -t current_repos <<< "$lines"
 # mapfile: built-in Bash command that reads lines from the standard input (or from a file) and stores them in an array
 # -t: tells mapfile to omit the trailing newline characters from each line it reads
@@ -16,8 +14,12 @@ mapfile -t current_repos <<< "$lines"
 
 ## New docker login for push
 # $(aws ecr get-login-password)
-# aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
-docker login -u AWS -p $(aws ecr get-login-password --region us-east-1) 021891577602.dkr.ecr.us-east-1.amazonaws.com    
+#  printing docker versions
+which docker
+docker --version    
+aws --version
+aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+# docker login -u AWS -p $(aws ecr get-login-password --region us-east-1) 021891577602.dkr.ecr.us-east-1.amazonaws.com    
                                          #  ^^to avoid the TTY login error
 echo "DEBUG: docker login command ran"
 #$(aws ecr get-login --no-include-email) #  docker login for push
