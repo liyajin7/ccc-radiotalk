@@ -3,9 +3,11 @@
 ## Create repos (if necessary), build, tag and push
 declare -a target_repos=("worker")
 export AWS_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r .Account)"
+echo "DEBUG: aws sts command ran"
 
 declare -a current_repos
 lines="$(aws ecr describe-repositories | jq -r '.repositories[] | .repositoryName')"
+echo "DEBUG: aws ecr describe-repositories command ran"
 mapfile -t current_repos <<< "$lines"
 # mapfile: built-in Bash command that reads lines from the standard input (or from a file) and stores them in an array
 # -t: tells mapfile to omit the trailing newline characters from each line it reads
@@ -14,7 +16,10 @@ mapfile -t current_repos <<< "$lines"
 
 ## New docker login for push
 # $(aws ecr get-login-password)
-aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+# aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+docker login -u AWS -p $(aws ecr get-login-password --region us-east-1) 021891577602.dkr.ecr.us-east-1.amazonaws.com    
+                                         #  ^^to avoid the TTY login error
+echo "DEBUG: docker login command ran"
 #$(aws ecr get-login --no-include-email) #  docker login for push
                                          #  deprection of the command get-login --no-include-email in awscli version 1.7.10
                                          #  aws ecr get-login-password | docker login --username AWS --password-stdin 1234567890.dkr.ecr.us-west-2.amazonaws.com/reponame
@@ -37,8 +42,9 @@ for target in "${target_repos[@]}"; do
     fi
     
     export DOCKER_CONTENT_TRUST=0               # sets DCT to 0 to bypass "missing key signature"
-    echo "DCT is set to $DOCKER_CONTENT_TRUST"
+    echo "DEBUG: DCT is set to $DOCKER_CONTENT_TRUST"
     docker build -t "$rname" images/"$target" --disable-content-trust=true   # builds an image tagged/versioned as "talk-raio/worker" from directory (build-context) images/worker
+    echo "DEBUG: docker build ran, tagged $rname"
     docker tag "$rname:latest" "$repo_url"
     docker push "$repo_url"
 done
