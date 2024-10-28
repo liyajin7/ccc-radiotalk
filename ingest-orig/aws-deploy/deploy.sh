@@ -37,7 +37,8 @@ for target in "${target_repos[@]}"; do
     fi
     
     export DOCKER_CONTENT_TRUST=0               # sets DCT to 0 to bypass "missing key signature"
-    docker build -t "$rname" images/"$target"   # builds an image tagged/versioned as "talk-raio/worker" from directory (build-context) images/worker
+    echo "DCT is set to $DOCKER_CONTENT_TRUST"
+    docker build -t "$rname" images/"$target" --disable-content-trust=true   # builds an image tagged/versioned as "talk-raio/worker" from directory (build-context) images/worker
     docker tag "$rname:latest" "$repo_url"
     docker push "$repo_url"
 done
