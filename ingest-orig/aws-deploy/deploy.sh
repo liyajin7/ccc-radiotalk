@@ -17,17 +17,16 @@ which docker
 docker --version
 aws --version
 
-$(aws ecr get-login --no-include-email)  #  docker login for push
-echo "DEBUG: docker login command ran"
+# $(aws ecr get-login --no-include-email)  #  docker login for push
                                          #  deprection of the command get-login --no-include-email in awscli version 1.7.10
                                          #  aws ecr get-login-password | docker login --username AWS --password-stdin 1234567890.dkr.ecr.us-west-2.amazonaws.com/reponame
 
 ## New docker login options, if updating to AWS CLI v2
 # $(aws ecr get-login-password)
-# aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+echo "DEBUG: docker login command ran"
 # docker login -u AWS -p $(aws ecr get-login-password --region us-east-1) 021891577602.dkr.ecr.us-east-1.amazonaws.com    
                                          #  ^^to avoid the TTY login error
-
 
 
 for target in "${target_repos[@]}"; do
