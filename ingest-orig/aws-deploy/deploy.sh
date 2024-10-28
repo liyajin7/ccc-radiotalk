@@ -13,8 +13,8 @@ mapfile -t current_repos <<< "$lines"
 # <<<: passes the content of a string to the command on the left side
 
 ## New docker login for push
-$(aws ecr get-login-password)
-# aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
+# $(aws ecr get-login-password)
+aws ecr get-login-password | docker login --username AWS --password-stdin 021891577602.dkr.ecr.us-east-1.amazonaws.com
 #$(aws ecr get-login --no-include-email) #  docker login for push
                                          #  deprection of the command get-login --no-include-email in awscli version 1.7.10
                                          #  aws ecr get-login-password | docker login --username AWS --password-stdin 1234567890.dkr.ecr.us-west-2.amazonaws.com/reponame
