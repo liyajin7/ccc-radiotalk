@@ -254,8 +254,8 @@ Resources:
   DBParameterGroup:
     Type: AWS::RDS::DBParameterGroup
     Properties:
-      Description: "Talk radio postgres 10 DB parameter group"
-      Family: "postgres10"
+      Description: "Talk radio postgres 14 DB parameter group"  # updated from postgres10
+      Family: "postgres14"                                      # updated from postgres10
       Parameters:
         max_connections: "LEAST({DBInstanceClassMemory/3177131},5000)"
 
