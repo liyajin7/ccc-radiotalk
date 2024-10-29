@@ -254,10 +254,10 @@ Resources:
   DBParameterGroup:
     Type: AWS::RDS::DBParameterGroup
     Properties:
-      Description: "Talk radio postgres 14 DB parameter group"  # updated from postgres10
-      Family: "postgres14"                                      # updated from postgres10
+      Description: "Talk radio postgres 15 DB parameter group"  # updated from postgres10
+      Family: "postgres15"                                      # updated from postgres10
       Parameters:
-        max_connections: "LEAST({DBInstanceClassMemory/3177131},5000)"
+        max_connections: "LEAST({DBInstanceClassMemory/3177131},5000)"  ##
 
   Database:
     Type: AWS::RDS::DBInstance
@@ -266,12 +266,12 @@ Resources:
       AllowMajorVersionUpgrade: false
       AutoMinorVersionUpgrade: true
       BackupRetentionPeriod: 30
-      DBInstanceClass: "db.t2.small"
+      DBInstanceClass: "db.t3.medium"   #  "db.t2.small"
       DBName: !Ref DatabaseDBName
       DBSubnetGroupName: !Ref DBSubnetGroup
       DBParameterGroupName: !Ref DBParameterGroup
       Engine: postgres
-      EngineVersion: "14.9"
+      EngineVersion: "15.4"
       MasterUsername: !Ref DatabaseUsername
       MasterUserPassword: !Ref DatabasePassword
       MultiAZ: false
