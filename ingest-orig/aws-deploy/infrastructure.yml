@@ -271,7 +271,7 @@ Resources:
       DBSubnetGroupName: !Ref DBSubnetGroup
       DBParameterGroupName: !Ref DBParameterGroup
       Engine: postgres
-      EngineVersion: "10.1"
+      EngineVersion: "14.9"
       MasterUsername: !Ref DatabaseUsername
       MasterUserPassword: !Ref DatabasePassword
       MultiAZ: false
