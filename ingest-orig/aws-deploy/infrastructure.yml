@@ -324,6 +324,7 @@ Resources:
             yum install -y aws-cfn-bootstrap
             /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchTemplate
             /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
+      VersionDescription: '0'
     Metadata:
       AWS::CloudFormation::Init:
         config:
@@ -539,6 +540,7 @@ Resources:
       # LaunchConfigurationName: !Ref LaunchConfiguration
       LaunchTemplate:
         LaunchTemplateName: !Ref LaunchTemplate
+        Version: '0'
       MinSize: !Ref DesiredClusterCount
       MaxSize: !Ref DesiredClusterCount
       DesiredCapacity: !Ref DesiredClusterCount
