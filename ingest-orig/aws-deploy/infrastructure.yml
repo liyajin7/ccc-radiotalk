@@ -312,15 +312,15 @@ Resources:
       LaunchTemplateData:       ## Properties from LaunchConfiguration
         ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
         InstanceType: !Ref InstanceType
-        SecurityGroups:
-          - !Ref ComputeSecurityGroup
+        # SecurityGroups:
+        #   - !Ref ComputeSecurityGroup
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
           - DeviceIndex: 0
             AssociatePublicIpAddress: true
-            # Groups:
-            #   - !Ref ComputeSecurityGroup
+            Groups:
+              - !Ref ComputeSecurityGroup
         UserData:
           "Fn::Base64": !Sub |
             #!/bin/bash
