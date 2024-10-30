@@ -316,8 +316,8 @@ Resources:
           - !Ref ComputeSecurityGroup
         IamInstanceProfile:
           Name: !Ref InstanceProfile
-        NetworkInterface:
-          AssociatePublicIpAddress: true
+        NetworkInterfaces:
+          - AssociatePublicIpAddress: true
         UserData:
           "Fn::Base64": !Sub |
             #!/bin/bash
