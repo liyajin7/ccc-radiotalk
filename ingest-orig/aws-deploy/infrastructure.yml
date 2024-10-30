@@ -317,7 +317,10 @@ Resources:
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
-          - AssociatePublicIpAddress: true
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            Groups:
+              - !Ref ComputeSecurityGroup
         UserData:
           "Fn::Base64": !Sub |
             #!/bin/bash
