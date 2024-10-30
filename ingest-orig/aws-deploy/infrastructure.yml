@@ -540,7 +540,7 @@ Resources:
       # LaunchConfigurationName: !Ref LaunchConfiguration
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
-        Version: '0'
+        Version: !GetAtt LaunchTemplate.DefaultVersionNumber # '$Latest'
       MinSize: !Ref DesiredClusterCount
       MaxSize: !Ref DesiredClusterCount
       DesiredCapacity: !Ref DesiredClusterCount
