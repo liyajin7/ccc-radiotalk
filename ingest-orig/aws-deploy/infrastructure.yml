@@ -539,7 +539,7 @@ Resources:
         - !Ref ComputeSubnetB
       # LaunchConfigurationName: !Ref LaunchConfiguration
       LaunchTemplate:
-        LaunchTemplateName: !Ref LaunchTemplate
+        LaunchTemplateId: !Ref LaunchTemplate
         Version: '0'
       MinSize: !Ref DesiredClusterCount
       MaxSize: !Ref DesiredClusterCount
