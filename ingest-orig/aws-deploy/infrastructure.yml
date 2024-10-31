@@ -312,8 +312,6 @@ Resources:
       LaunchTemplateData:       ## Properties from LaunchConfiguration
         ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
         InstanceType: !Ref InstanceType
-        # SecurityGroups:
-        #   - !Ref ComputeSecurityGroup
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
