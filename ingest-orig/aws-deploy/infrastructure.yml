@@ -95,7 +95,7 @@ Mappings:
     us-east-2:
       AMI: ami-ef64528a
     us-east-1:
-      AMI: ami-cad827b7
+      AMI: ami-06b21ccaeff8cd686
     us-west-2:
       AMI: ami-baa236c2
     us-west-1:
@@ -315,8 +315,8 @@ Resources:
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
-          - DeviceIndex: 0
-            AssociatePublicIpAddress: true
+          - AssociatePublicIpAddress: true
+            DeviceIndex: 0
             Groups:
               - !Ref ComputeSecurityGroup
         UserData:
