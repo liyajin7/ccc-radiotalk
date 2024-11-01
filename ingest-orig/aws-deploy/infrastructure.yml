@@ -571,9 +571,9 @@ Resources:
   WorkerTask:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: talk-radio-task-worker
+      Family: talk-radio-task-worker-1
       ContainerDefinitions:
-        - Name: talk-radio-worker
+        - Name: talk-radio-worker-1
           Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/talk-radio/worker:latest
           Essential: true
           MemoryReservation: 285
@@ -606,7 +606,7 @@ Resources:
             Options:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Sub ${AWS::Region}
-              awslogs-stream-prefix: talk-radio-task-worker
+              awslogs-stream-prefix: talk-radio-task-worker-1
 
   WorkerService:
     Type: AWS::ECS::Service
