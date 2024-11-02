@@ -99,7 +99,7 @@ Mappings:
     us-east-2:
       AMI: ami-ef64528a
     us-east-1:
-      AMI: ami-05f16f3539e999b77
+      AMI: ami-0ddc798b3f1a5117e
     us-west-2:
       AMI: ami-baa236c2
     us-west-1:
