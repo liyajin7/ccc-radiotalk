@@ -10,6 +10,10 @@ Parameters:
     Type: String
     Default: talkradio
 
+  KeyName:
+    Type: String
+    Default: talkradio-zoe.pem
+
   DesiredWorkerCount:
     Type: Number
     Default: 1
@@ -124,6 +128,10 @@ Mappings:
       AMI: ami-da2c66b6
 
 Resources:
+  KeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Ref KeyName
   ##
   ## IAM roles for other resources
   ##
@@ -311,6 +319,7 @@ Resources:
     Properties:
       LaunchTemplateData:       ## Properties from LaunchConfiguration
         ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
+        KeyName: !Ref KeyPair
         InstanceType: !Ref InstanceType
         IamInstanceProfile:
           Name: !Ref InstanceProfile
