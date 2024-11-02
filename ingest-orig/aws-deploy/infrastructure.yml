@@ -99,7 +99,7 @@ Mappings:
     us-east-2:
       AMI: ami-ef64528a
     us-east-1:
-      AMI: ami-06813d3793d203a47
+      AMI: ami-05f16f3539e999b77
     us-west-2:
       AMI: ami-baa236c2
     us-west-1:
@@ -333,7 +333,7 @@ Resources:
             #!/bin/bash
             yum install -y aws-cfn-bootstrap
             /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchTemplate
-            #/opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
+            /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
       VersionDescription: '0'
     Metadata:
       AWS::CloudFormation::Init:
@@ -541,38 +541,38 @@ Resources:
   #                 - /etc/awslogs/awslogs.conf
   #                 - /etc/awslogs/awscli.conf
 
-  # AutoScalingGroup:
-  #   Type: AWS::AutoScaling::AutoScalingGroup
-  #   Properties:
-  #     VPCZoneIdentifier:
-  #       - !Ref ComputeSubnetA
-  #       - !Ref ComputeSubnetB
-  #     # LaunchConfigurationName: !Ref LaunchConfiguration
-  #     LaunchTemplate:
-  #       LaunchTemplateId: !Ref LaunchTemplate
-  #       Version: !GetAtt LaunchTemplate.DefaultVersionNumber # '$Latest'
-  #     MinSize: !Ref DesiredClusterCount
-  #     MaxSize: !Ref DesiredClusterCount
-  #     DesiredCapacity: !Ref DesiredClusterCount
-  #     Tags:
-  #       - Key: Name
-  #         Value: talk-radio ECS host
-  #         PropagateAtLaunch: true
-  #   CreationPolicy:
-  #     ResourceSignal:
-  #       Timeout: PT15M
-  #   UpdatePolicy:
-  #     AutoScalingRollingUpdate:
-  #       MinInstancesInService: 1
-  #       MaxBatchSize: 1
-  #       PauseTime: PT15M
-  #       SuspendProcesses:
-  #         - HealthCheck
-  #         - ReplaceUnhealthy
-  #         - AZRebalance
-  #         - AlarmNotification
-  #         - ScheduledActions
-  #       WaitOnResourceSignals: true
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref ComputeSubnetA
+        - !Ref ComputeSubnetB
+      # LaunchConfigurationName: !Ref LaunchConfiguration
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.DefaultVersionNumber # '$Latest'
+      MinSize: !Ref DesiredClusterCount
+      MaxSize: !Ref DesiredClusterCount
+      DesiredCapacity: !Ref DesiredClusterCount
+      Tags:
+        - Key: Name
+          Value: talk-radio ECS host
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        SuspendProcesses:
+          # - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+        WaitOnResourceSignals: true
 
   ##
   ## Our task and service
@@ -619,7 +619,7 @@ Resources:
 
   WorkerService:
     Type: AWS::ECS::Service
-    # DependsOn: AutoScalingGroup
+    DependsOn: AutoScalingGroup
     Properties:
       Cluster: !Ref Cluster
       LaunchType: EC2
