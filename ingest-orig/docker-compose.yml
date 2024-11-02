@@ -24,6 +24,7 @@ services:
             context: images/postgres/
             args:
                 - POSTGRES_VERSION=15.4     #12.6
+                - POSTGRES_HOST_AUTH_METHOD=password
                 - POSTGIS_VERSION=postgresql-15-postgis-3   #postgresql-12-postgis-3
         container_name: postgres
         hostname: postgres
