@@ -12,7 +12,7 @@ Parameters:
 
   KeyName:
     Type: String
-    Default: talkradio-zoe.pem
+    Default: talkradio-cf
 
   DesiredWorkerCount:
     Type: Number
