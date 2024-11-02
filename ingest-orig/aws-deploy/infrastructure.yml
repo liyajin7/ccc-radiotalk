@@ -24,7 +24,7 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: c4.large
+    Default: m5.large
 
   TargetS3Bucket:
     Type: String
@@ -99,7 +99,7 @@ Mappings:
     us-east-2:
       AMI: ami-ef64528a
     us-east-1:
-      AMI: ami-0419538084bce80f7
+      AMI: ami-06813d3793d203a47
     us-west-2:
       AMI: ami-baa236c2
     us-west-1:
