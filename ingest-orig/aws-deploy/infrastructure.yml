@@ -24,7 +24,7 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: c4.large
+    Default: m5.large
 
   TargetS3Bucket:
     Type: String
@@ -92,6 +92,11 @@ Parameters:
   DBSubnetB:
     Type: AWS::EC2::Subnet::Id
     Default: subnet-028199d00a32fda59
+
+  ECSAMI:
+    Description: The Amazon Machine Image ID used for the cluster
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ecs/optimized-ami/amazon-linux-2023/recommended/image_id
 
 Mappings:
   # See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
@@ -318,7 +323,7 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:       ## Properties from LaunchConfiguration
-        ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
+        ImageId: !Ref ECSAMI
         KeyName: !Ref KeyPair
         InstanceType: !Ref InstanceType
         IamInstanceProfile:
@@ -561,13 +566,14 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
+      AutoScalingCreationPolicy:
+        MinInstancesInService: 1
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: 1
         MaxBatchSize: 1
         PauseTime: PT15M
         SuspendProcesses:
-          - HealthCheck
+          # - HealthCheck
           - ReplaceUnhealthy
           - AZRebalance
           - AlarmNotification
