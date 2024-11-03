@@ -561,9 +561,10 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
+      AutoScalingCreationPolicy:
+        MinSuccessfulInstancesPercent: 0
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinSuccessfulInstancesPercent: 0
         MaxBatchSize: 1
         PauseTime: PT15M
         SuspendProcesses:
