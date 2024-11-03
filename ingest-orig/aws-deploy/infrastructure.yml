@@ -323,7 +323,7 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:       ## Properties from LaunchConfiguration
-        ImageId: Ref: ECSAMI
+        ImageId: !Ref ECSAMI
         KeyName: !Ref KeyPair
         InstanceType: !Ref InstanceType
         IamInstanceProfile:
