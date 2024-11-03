@@ -556,7 +556,7 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.DefaultVersionNumber # '$Latest'
-      MinSize: 0
+      MinSize: !Ref DesiredClusterCount
       MaxSize: !Ref DesiredClusterCount
       DesiredCapacity: !Ref DesiredClusterCount
       Tags:
@@ -567,7 +567,7 @@ Resources:
       ResourceSignal:
         Timeout: PT15M
       AutoScalingCreationPolicy:
-        MinSuccessfulInstancesPercent: 0
+        MinInstancesInService: 1
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MaxBatchSize: 1
