@@ -338,6 +338,7 @@ Resources:
           "Fn::Base64": !Sub |
             #!/bin/bash
             yum install -y aws-cfn-bootstrap
+            echo ECS_CLUSTER=talk-radio >> /etc/ecs/ecs.config
             /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchTemplate
             /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
       VersionDescription: '0'
