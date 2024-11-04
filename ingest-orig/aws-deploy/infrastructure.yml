@@ -424,6 +424,8 @@ Resources:
                 log_stream_name = {instance_id}/var/log/cloud-init-output
                 datetime_format = %Y-%m-%dT%H:%M:%SZ
 
+                sleep 120
+
           services:
             sysvinit:
               cfn-hup:
