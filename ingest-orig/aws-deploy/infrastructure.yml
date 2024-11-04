@@ -417,6 +417,12 @@ Resources:
                 log_group_name = ${Cluster}-/var/log/ecs/audit.log
                 log_stream_name = {instance_id}/var/log/ecs/audit.log
                 datetime_format = %Y-%m-%dT%H:%M:%SZ
+              
+                [/var/log/cloud-init-output.log]
+                file = /var/log/cloud-init-output.log
+                log_group_name = ${Cluster}-/var/log/cloud-init-output
+                log_stream_name = {instance_id}/var/log/cloud-init-output
+                datetime_format = %Y-%m-%dT%H:%M:%SZ
 
           services:
             sysvinit:
