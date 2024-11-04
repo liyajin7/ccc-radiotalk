@@ -509,7 +509,8 @@ Resources:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
       MinSize: 0
-      MaxSize: Ref! MaxSize
+      MaxSize:
+        Ref: MaxSize
       DesiredCapacity: !Ref DesiredCapacity
       NewInstancesProtectedFromScaleIn: true
       Tags:
