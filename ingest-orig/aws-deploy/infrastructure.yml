@@ -16,29 +16,19 @@ Parameters:
 
   DesiredWorkerCount:
     Type: Number
-    Default: "1"
+    Default: 1
 
-  # DesiredClusterCount:
-  #   Type: Number
-  #   Default: 1
-
-  DesiredCapacity:
+  DesiredClusterCount:
     Type: Number
-    Default: "1"
-    Description: Number of EC2 instances to launch in your ECS cluster.
-
-  MaxSize:
-    Type: Number
-    Default: "100"
-    Description: Maximum number of EC2 instances that
+    Default: 1
 
   InstanceType:
     Type: String
-    Default: t2.large
+    Default: m5.large
 
   TargetS3Bucket:
     Type: String
-    Default: lsm-data   #  prev lsm-data
+    Default: lsm-data-1   #  prev lsm-data
 
   TargetS3Prefix:
     Type: String
@@ -46,7 +36,7 @@ Parameters:
 
   SourceS3Bucket:
     Type: String
-    Default: lsm-data   #  prev lsm-data
+    Default: lsm-data-1   #  prev lsm-data
 
   SourceS3Key:
     Type: String
@@ -143,18 +133,10 @@ Mappings:
       AMI: ami-da2c66b6
 
 Resources:
-
-  # This is authorizes ECS to manage resources on your
-  # account on your behalf. This role is likely already created on your account
-  # ECSRole:
-  #  Type: AWS::IAM::ServiceLinkedRole
-  #  Properties:
-  #    AWSServiceName: 'ecs.amazonaws.com'
   KeyPair:
     Type: AWS::EC2::KeyPair
     Properties:
       KeyName: !Ref KeyName
-  
   ##
   ## IAM roles for other resources
   ##
@@ -162,6 +144,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: 2012-10-17
         Statement:
           - Effect: Allow
             Action: sts:AssumeRole
@@ -329,9 +312,6 @@ Resources:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: talk-radio
-      ClusterSettings:
-        - Name: containerInsights
-          Value: enabled
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -356,9 +336,9 @@ Resources:
               - !Ref ComputeSecurityGroup
         UserData:
           "Fn::Base64": !Sub |
-            #!/bin/bash -xe
+            #!/bin/bash
             yum install -y aws-cfn-bootstrap
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource LaunchTemplate --configsets full_install --region ${AWS::Region} &
+            /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchTemplate
             /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
       VersionDescription: '0'
     Metadata:
@@ -463,43 +443,120 @@ Resources:
                   - /etc/awslogs/awslogs.conf
                   - /etc/awslogs/awscli.conf
 
-  # Create an ECS capacity provider to attach the ASG to the ECS cluster
-  # so that it autoscales as we launch more containers
-  CapacityProvider:
-    Type: AWS::ECS::CapacityProvider
-    Properties:
-      AutoScalingGroupProvider:
-        AutoScalingGroupArn: !Ref AutoScalingGroup
-        ManagedScaling:
-          InstanceWarmupPeriod: 60
-          MinimumScalingStepSize: 1
-          MaximumScalingStepSize: 100
-          Status: ENABLED
-          # Percentage of cluster reservation to try to maintain
-          TargetCapacity: 100
-        ManagedTerminationProtection: ENABLED
 
-  # Create a cluster capacity provider assocation so that the cluster
-  # will use the capacity provider
-  CapacityProviderAssociation:
-    Type: AWS::ECS::ClusterCapacityProviderAssociations
-    Properties:
-      CapacityProviders:
-        - !Ref CapacityProvider
-      Cluster: !Ref Cluster
-      DefaultCapacityProviderStrategy:
-        - Base: 0
-          CapacityProvider: !Ref CapacityProvider
-          Weight: 1
+# ----
+  # LaunchConfiguration:
+  #   Type: AWS::AutoScaling::LaunchConfiguration
+  #   Properties:
+  #     ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
+  #     AssociatePublicIpAddress: true
+  #     InstanceType: !Ref InstanceType
+  #     SecurityGroups:
+  #       - !Ref ComputeSecurityGroup
+  #     IamInstanceProfile: !Ref InstanceProfile
+  #     UserData:
+  #       "Fn::Base64": !Sub |
+  #         #!/bin/bash
+  #         yum install -y aws-cfn-bootstrap
+  #         /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchTemplate
+  #         /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
 
+  #   Metadata:
+  #     AWS::CloudFormation::Init:
+  #       config:
+  #         packages:
+  #           yum:
+  #             awslogs: []
+
+  #         commands:
+  #           01_add_instance_to_cluster:
+  #             command: !Sub echo ECS_CLUSTER=${Cluster} >> /etc/ecs/ecs.config
+
+  #           02_reserve_system_memory:
+  #             command: echo ECS_RESERVED_MEMORY=256 >> /etc/ecs/ecs.config
+
+  #         files:
+  #           "/etc/cfn/cfn-hup.conf":
+  #             mode: 000400
+  #             owner: root
+  #             group: root
+  #             content: !Sub |
+  #               [main]
+  #               stack=${AWS::StackId}
+  #               region=${AWS::Region}
+
+  #           "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+  #             content: !Sub |
+  #               [cfn-auto-reloader-hook]
+  #               triggers=post.update
+  #               path=Resources.LaunchConfiguration.Metadata.AWS::CloudFormation::Init
+  #               action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+
+  #           "/etc/awslogs/awscli.conf":
+  #             content: !Sub |
+  #               [plugins]
+  #               cwlogs = cwlogs
+  #               [default]
+  #               region = ${AWS::Region}
+
+  #           "/etc/awslogs/awslogs.conf":
+  #             content: !Sub |
+  #               [general]
+  #               state_file = /var/lib/awslogs/agent-state
+
+  #               [/var/log/dmesg]
+  #               file = /var/log/dmesg
+  #               log_group_name = ${Cluster}-/var/log/dmesg
+  #               log_stream_name = {instance_id}/var/log/dmesg
+
+  #               [/var/log/messages]
+  #               file = /var/log/messages
+  #               log_group_name = ${Cluster}-/var/log/messages
+  #               log_stream_name = {instance_id}/var/log/messages
+  #               datetime_format = %b %d %H:%M:%S
+
+  #               [/var/log/docker]
+  #               file = /var/log/docker
+  #               log_group_name = ${Cluster}-/var/log/docker
+  #               log_stream_name = {instance_id}/var/log/docker
+  #               datetime_format = %Y-%m-%dT%H:%M:%S.%f
+
+  #               [/var/log/ecs/ecs-init.log]
+  #               file = /var/log/ecs/ecs-init.log.*
+  #               log_group_name = ${Cluster}-/var/log/ecs/ecs-init.log
+  #               log_stream_name = {instance_id}/var/log/ecs/ecs-init.log
+  #               datetime_format = %Y-%m-%dT%H:%M:%SZ
+
+  #               [/var/log/ecs/ecs-agent.log]
+  #               file = /var/log/ecs/ecs-agent.log.*
+  #               log_group_name = ${Cluster}-/var/log/ecs/ecs-agent.log
+  #               log_stream_name = {instance_id}/var/log/ecs/ecs-agent.log
+  #               datetime_format = %Y-%m-%dT%H:%M:%SZ
+
+  #               [/var/log/ecs/audit.log]
+  #               file = /var/log/ecs/audit.log.*
+  #               log_group_name = ${Cluster}-/var/log/ecs/audit.log
+  #               log_stream_name = {instance_id}/var/log/ecs/audit.log
+  #               datetime_format = %Y-%m-%dT%H:%M:%SZ
+
+  #         services:
+  #           sysvinit:
+  #             cfn-hup:
+  #               enabled: true
+  #               ensureRunning: true
+  #               files:
+  #                 - /etc/cfn/cfn-hup.conf
+  #                 - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+
+  #             awslogs:
+  #               enabled: true
+  #               ensureRunning: true
+  #               files:
+  #                 - /etc/awslogs/awslogs.conf
+  #                 - /etc/awslogs/awscli.conf
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
-    DependsOn:
-      # This is to ensure that the ASG gets deleted first before these
-      # resources, when it comes to stack teardown.
-      - Cluster
-      - InstanceRole
     Properties:
       VPCZoneIdentifier:
         - !Ref ComputeSubnetA
@@ -507,19 +564,29 @@ Resources:
       # LaunchConfigurationName: !Ref LaunchConfiguration
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
-        Version: !GetAtt LaunchTemplate.LatestVersionNumber
-      MinSize: 1
-      MaxSize:
-        Ref: MaxSize
-      DesiredCapacity: !Ref DesiredCapacity
-      NewInstancesProtectedFromScaleIn: true
+        Version: !GetAtt LaunchTemplate.DefaultVersionNumber # '$Latest'
+      MinSize: !Ref DesiredClusterCount
+      MaxSize: !Ref DesiredClusterCount
+      DesiredCapacity: !Ref DesiredClusterCount
       Tags:
         - Key: Name
           Value: talk-radio ECS host
           PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
     UpdatePolicy:
-      AutoScalingReplacingUpdate:
-        WillReplace: "true"
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        SuspendProcesses:
+          # - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+        WaitOnResourceSignals: true
 
   ##
   ## Our task and service
@@ -527,9 +594,9 @@ Resources:
   WorkerTask:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: talk-radio-task-worker
+      Family: talk-radio-task-worker-1
       ContainerDefinitions:
-        - Name: talk-radio-worker
+        - Name: talk-radio-worker-1
           Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/talk-radio/worker:latest
           Essential: true
           MemoryReservation: 285
@@ -562,7 +629,7 @@ Resources:
             Options:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Sub ${AWS::Region}
-              awslogs-stream-prefix: talk-radio-task-worker
+              awslogs-stream-prefix: talk-radio-task-worker-1
 
   WorkerService:
     Type: AWS::ECS::Service
@@ -588,9 +655,3 @@ Outputs:
   DatabasePort:
     Description: Postgres port of the ingest database
     Value: !GetAtt Database.Endpoint.Port
-
-  CapacityProvider:
-    Description: The cluster capacity provider that the service should use to
-      request capacity when it wants to start up a task
-    Value: CapacityProvider
-
