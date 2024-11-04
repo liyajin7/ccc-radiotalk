@@ -572,9 +572,6 @@ Resources:
         - Key: Name
           Value: talk-radio ECS host
           PropagateAtLaunch: true
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT15M
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MinInstancesInService: 1
