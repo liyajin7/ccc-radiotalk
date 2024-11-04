@@ -24,7 +24,7 @@ Parameters:
 
   DesiredCapacity:
     Type: Number
-    Default: "0"
+    Default: "1"
     Description: Number of EC2 instances to launch in your ECS cluster.
 
   MaxSize:
@@ -508,7 +508,7 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
-      MinSize: 0
+      MinSize: 1
       MaxSize:
         Ref: MaxSize
       DesiredCapacity: !Ref DesiredCapacity
